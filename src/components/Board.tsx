@@ -11,6 +11,14 @@ interface BoardProps {
 }
 
 export function Board({ guesses, currentGuess, currentRow, shake, fantomeMode }: BoardProps) {
+  // Lettres vertes confirmées par position (d'après les lignes déjà soumises)
+  const correctPositions: (string | null)[] = Array(WORD_LENGTH).fill(null);
+  guesses.forEach(guess => {
+    guess.forEach((tile, col) => {
+      if (tile.state === 'correct') correctPositions[col] = tile.letter;
+    });
+  });
+
   return (
     <div className="board">
       {Array(MAX_GUESSES).fill(null).map((_, rowIdx) => {
@@ -21,16 +29,13 @@ export function Board({ guesses, currentGuess, currentRow, shake, fantomeMode }:
         const rowClass = [
           'board-row',
           isCurrentRow && shake ? 'board-row--shake' : '',
-          isSubmitted && fantomeMode ? 'board-row--fantome' : '',
         ].filter(Boolean).join(' ');
 
         return (
-          <div
-            key={rowIdx}
-            className={rowClass}
-          >
+          <div key={rowIdx} className={rowClass}>
             {Array(WORD_LENGTH).fill(null).map((_, colIdx) => {
-              if (guess) {
+              // Ligne déjà soumise : affichage normal
+              if (isSubmitted && guess) {
                 return (
                   <Tile
                     key={colIdx}
@@ -40,16 +45,28 @@ export function Board({ guesses, currentGuess, currentRow, shake, fantomeMode }:
                   />
                 );
               }
+
+              // Lettre fantôme pour cette position (si mode actif)
+              const ghost = fantomeMode ? (correctPositions[colIdx] ?? '') : '';
+
+              // Ligne courante : lettre tapée > fantôme > vide
               if (isCurrentRow) {
-                const letter = currentGuess[colIdx] || '';
-                const state = !letter ? 'empty' : letter === '_' ? 'skip' : 'active';
-                return (
-                  <Tile
-                    key={colIdx}
-                    letter={letter === '_' ? '' : letter}
-                    state={state}
-                  />
-                );
+                const typed = currentGuess[colIdx] || '';
+                if (typed === '_') {
+                  return <Tile key={colIdx} letter="" state="skip" />;
+                }
+                if (typed) {
+                  return <Tile key={colIdx} letter={typed} state="active" />;
+                }
+                if (ghost) {
+                  return <Tile key={colIdx} letter={ghost} state="ghost" />;
+                }
+                return <Tile key={colIdx} letter="" state="empty" />;
+              }
+
+              // Ligne future : fantôme ou vide
+              if (ghost) {
+                return <Tile key={colIdx} letter={ghost} state="ghost" />;
               }
               return <Tile key={colIdx} letter="" state="empty" />;
             })}

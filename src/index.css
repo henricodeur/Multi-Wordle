@@ -342,14 +342,13 @@ body {
 .key--present { background: var(--color-present); border-color: #9f6414; }
 .key--absent  { background: #2C2C2C; border-color: #212121; color: #969696; }
 
-/* ── Mode Fantôme — cases vertes transparentes sur les lignes validées ── */
-.board-row--fantome .tile--correct {
-  background: transparent;
-  border: 2px solid var(--color-correct);
+/* ── Mode Fantôme — lettre verte confirmée en transparence sur les lignes futures ── */
+.tile--ghost {
+  border-color: rgba(62, 170, 66, 0.25);
 }
 
-.board-row--fantome .tile--correct .tile__letter {
-  color: var(--color-correct);
+.tile--ghost .tile__letter {
+  color: rgba(62, 170, 66, 0.35);
 }
 
 /* ── Feature switches (onglet Options) ── */
