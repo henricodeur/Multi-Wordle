@@ -100,6 +100,8 @@ function App() {
   const [chatMessages, setChatMessages]   = useState<ChatMessage[]>([]);
   const [unreadChat, setUnreadChat]       = useState(0);
   const [gameHistory, setGameHistory]     = useState<GameHistoryEntry[]>(() => loadHistory());
+  const [odFeature, setOdFeature]         = useState(() => localStorage.getItem('feature_od') === 'true');
+  const [fantomeMode, setFantomeMode]     = useState(() => localStorage.getItem('feature_fantome') === 'true');
 
   const countdownRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const toastRef      = useRef<ReturnType<typeof setTimeout>  | null>(null);
@@ -243,24 +245,14 @@ function App() {
   /* ── Chargement de la partie active ── */
   useEffect(() => {
     async function loadGame() {
-      const { data, error } = await supabase
-        .from('games').select('*').eq('status', 'active')
-        .order('started_at', { ascending: false }).limit(1).single();
+      // Le mot est généré côté client mais n'est utilisé que si aucune partie
+      // n'existe encore. Le verrou pg_advisory côté serveur garantit qu'un seul
+      // joueur crée effectivement la partie — tous les autres reçoivent la même.
+      const word = getRandomWord();
+      const { data, error } = await supabase.rpc('get_or_create_active_game', { p_word: word });
 
-      if (error || !data) {
-        const word = getRandomWord();
-        const { data: newGame, error: insertError } = await supabase
-          .from('games').insert({ word, status: 'active' }).select().single();
-        if (insertError) {
-          const { data: existing } = await supabase
-            .from('games').select('*').eq('status', 'active')
-            .order('started_at', { ascending: false }).limit(1).single();
-          if (existing) setGame(existing);
-        } else if (newGame) {
-          setGame(newGame);
-        }
-      } else {
-        setGame(data);
+      if (!error && data && data.length > 0) {
+        setGame(data[0]);
       }
     }
     loadGame();
@@ -607,6 +599,14 @@ function App() {
   const submitGuess = useCallback(() => {
     if (!game || gameOver || currentGuess.length !== WORD_LENGTH || winData) return;
 
+    if (currentGuess.includes('_')) {
+      showToast('Complète toutes les cases');
+      vibrateError();
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+      return;
+    }
+
     if (!isValidWord(currentGuess) && currentGuess !== game.word) {
       showToast('Mot non reconnu');
       sounds.playInvalidWord();
@@ -650,6 +650,9 @@ function App() {
       setCurrentGuess(g => g.slice(0, -1));
     } else if (key === 'ENTER' || key === 'Enter') {
       submitGuess();
+    } else if (key === ' ' && odFeature && currentGuess.length < WORD_LENGTH) {
+      // OD Feature — espace = case vide placeholder pour visualiser la position
+      setCurrentGuess(g => g + '_');
     } else if (/^[A-Za-z]$/.test(key) && currentGuess.length < WORD_LENGTH) {
       sounds.playKeyClick();
       vibrateKey();
@@ -700,7 +703,7 @@ function App() {
         <div className="game-area">
           <main className="main">
             {toast && <Toast message={toast} />}
-            <Board guesses={guesses} currentGuess={currentGuess} currentRow={currentRow} shake={shake} />
+            <Board guesses={guesses} currentGuess={currentGuess} currentRow={currentRow} shake={shake} fantomeMode={fantomeMode} />
             {lostWord && !winData && (
               <div className="loss-banner">
                 <p className="loss-banner__label">Le mot était</p>
@@ -724,6 +727,10 @@ function App() {
           unreadChat={unreadChat}
           onChatSeen={() => setUnreadChat(0)}
           gameHistory={gameHistory}
+          odFeature={odFeature}
+          onToggleOdFeature={() => setOdFeature(v => { localStorage.setItem('feature_od', String(!v)); return !v; })}
+          fantomeMode={fantomeMode}
+          onToggleFantomeMode={() => setFantomeMode(v => { localStorage.setItem('feature_fantome', String(!v)); return !v; })}
         />
       </div>
       {winData && (

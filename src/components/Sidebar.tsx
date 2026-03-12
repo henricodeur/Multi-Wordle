@@ -9,7 +9,7 @@ export interface Score {
   streak: number;
 }
 
-type TabId = 'players' | 'chat' | 'history';
+type TabId = 'players' | 'chat' | 'history' | 'options';
 
 interface SidebarProps {
   connectedPlayers: string[];
@@ -26,6 +26,11 @@ interface SidebarProps {
   onChatSeen: () => void;
   // History
   gameHistory: GameHistoryEntry[];
+  // Features
+  odFeature: boolean;
+  onToggleOdFeature: () => void;
+  fantomeMode: boolean;
+  onToggleFantomeMode: () => void;
 }
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -64,6 +69,10 @@ export function Sidebar({
   unreadChat,
   onChatSeen,
   gameHistory,
+  odFeature,
+  onToggleOdFeature,
+  fantomeMode,
+  onToggleFantomeMode,
 }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<TabId>('players');
 
@@ -101,6 +110,12 @@ export function Sidebar({
             onClick={() => handleTabClick('history')}
           >
             📜 Historique
+          </button>
+          <button
+            className={`sidebar-tab${activeTab === 'options' ? ' sidebar-tab--active' : ''}`}
+            onClick={() => handleTabClick('options')}
+          >
+            ⚙️ Options
           </button>
         </div>
 
@@ -192,6 +207,39 @@ export function Sidebar({
                 📜 Dernières parties
               </h3>
               <GameHistory entries={gameHistory} />
+            </section>
+          )}
+
+          {/* ─ Options ─ */}
+          {activeTab === 'options' && (
+            <section className="sidebar-section">
+              <h3 className="sidebar-section__title">⚙️ Options</h3>
+
+              <div className="feature-item">
+                <div className="feature-item__text">
+                  <span className="feature-item__name">OD Feature</span>
+                  <span className="feature-item__desc">
+                    Appuie sur Espace pour passer une case et visualiser le mot en positionnant tes lettres connues
+                  </span>
+                </div>
+                <label className="toggle">
+                  <input type="checkbox" checked={odFeature} onChange={onToggleOdFeature} />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+
+              <div className="feature-item">
+                <div className="feature-item__text">
+                  <span className="feature-item__name">Mode Fantôme</span>
+                  <span className="feature-item__desc">
+                    Les cases vertes des lignes validées deviennent transparentes pour mieux voir le mot qui se forme
+                  </span>
+                </div>
+                <label className="toggle">
+                  <input type="checkbox" checked={fantomeMode} onChange={onToggleFantomeMode} />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
             </section>
           )}
         </div>

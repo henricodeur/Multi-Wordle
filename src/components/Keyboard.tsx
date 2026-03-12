@@ -17,15 +17,21 @@ interface KeyProps {
   onClick: () => void;
 }
 
+const KEY_LABEL: Record<string, string> = {
+  'ENTER': 'Entrer',
+  '⌫': 'Suppr',
+};
+
 function Key({ value, state, onClick }: KeyProps) {
   const isSpecial = value === 'ENTER' || value === '⌫';
+  const label = KEY_LABEL[value] ?? value;
   return (
     <button
       className={`key${state ? ` key--${state}` : ''}${isSpecial ? ' key--wide' : ''}`}
       onClick={onClick}
-      aria-label={value}
+      aria-label={label}
     >
-      {value}
+      {label}
     </button>
   );
 }

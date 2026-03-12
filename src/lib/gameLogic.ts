@@ -41,6 +41,7 @@ export function buildKeyboardStates(guesses: TileData[][]): Record<string, TileS
     absent: 1,
     empty: 0,
     active: 0,
+    skip: 0,
   };
 
   guesses.forEach(row => {

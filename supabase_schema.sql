@@ -57,6 +57,47 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Fonction atomique : récupère ou crée la partie active (évite les race conditions)
+-- Utilise un advisory lock pour garantir qu'un seul joueur crée la partie
+CREATE OR REPLACE FUNCTION get_or_create_active_game(p_word TEXT)
+RETURNS SETOF games AS $$
+DECLARE
+  v_game games;
+BEGIN
+  -- Première vérification sans verrou (optimisation)
+  SELECT * INTO v_game FROM games
+  WHERE status = 'active'
+  ORDER BY started_at DESC
+  LIMIT 1;
+
+  IF v_game.id IS NOT NULL THEN
+    RETURN NEXT v_game;
+    RETURN;
+  END IF;
+
+  -- Verrou exclusif pour éviter que deux joueurs créent simultanément une partie
+  PERFORM pg_advisory_xact_lock(1234567890);
+
+  -- Deuxième vérification après le verrou
+  SELECT * INTO v_game FROM games
+  WHERE status = 'active'
+  ORDER BY started_at DESC
+  LIMIT 1;
+
+  IF v_game.id IS NOT NULL THEN
+    RETURN NEXT v_game;
+    RETURN;
+  END IF;
+
+  -- Aucune partie active : on crée avec le mot fourni par le premier arrivé
+  INSERT INTO games (word, status)
+  VALUES (p_word, 'active')
+  RETURNING * INTO v_game;
+
+  RETURN NEXT v_game;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Active Realtime sur la table games
 -- (À faire aussi dans Supabase > Database > Replication > games)
 ALTER PUBLICATION supabase_realtime ADD TABLE games;
