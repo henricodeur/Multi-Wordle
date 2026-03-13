@@ -513,19 +513,8 @@ function App() {
             .eq('status', 'active');
 
           const newWord = getRandomWord();
-          const { data: newGame, error: insertError } = await supabase
-            .from('games')
-            .insert({ word: newWord, status: 'active' })
-            .select()
-            .single();
-
-          let nextGame = newGame;
-          if (insertError) {
-            const { data: existing } = await supabase
-              .from('games').select('*').eq('status', 'active')
-              .order('started_at', { ascending: false }).limit(1).single();
-            nextGame = existing;
-          }
+          const { data: rpcData } = await supabase.rpc('get_or_create_active_game', { p_word: newWord });
+          const nextGame = rpcData && rpcData.length > 0 ? rpcData[0] : null;
           if (nextGame) {
             startCountdown(nextGame, '', 0, game.word, false);
           }
